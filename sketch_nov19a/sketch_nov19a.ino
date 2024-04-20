@@ -2,9 +2,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <SPI.h>
-#include <EEPROM.h>
 #include <Thread.h>
-//#include <Fonts/FreeSansBoldOblique12pt7b.h>
 #include <Fonts/final_pixel_revised9pt7b.h>
 #include <Fonts/final_pixel_art11pt7b.h>
 #include <Fonts/Vermin_Vibes_198920pt7b.h>
@@ -42,7 +40,7 @@ String workoutList[15][5] = {
   };
 bool isFirst = true;
 int exCount = 0;
-const int btn1 = 17;
+const int btn1 = 0;
 
 //clockFunc related variables
 unsigned long currTime;
@@ -67,17 +65,15 @@ bool isSleeping = false;
 Thread thr = Thread();
 
 void setup() {
-  Wire.setSDA(SDA);
-  Wire.setSCL(SCL);
   Wire.begin();
   oled.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   oled.clearDisplay();
   oled.fillScreen(BLACK);
   nextExercise(exCount);
   exToGo();
-  printTime();
+  printWorkoutTime();
   pinMode(btn1, INPUT_PULLUP);
-  pinMode(18, INPUT_PULLUP);
+  pinMode(1, INPUT_PULLUP);
   thr.onRun(clockFunc);
   thr.setInterval(0);
 }
@@ -160,7 +156,7 @@ void nextExercise(int exerciseCount){
     }
  }
 
-void printTime(){
+void printWorkoutTime(){
   oled.fillRect(0, 40, 70, 25, BLACK);
   oled.setFont(&final_pixel_revised9pt7b);
   oled.setTextColor(WHITE);
@@ -213,7 +209,7 @@ void dayMonthFunc(){
   }
 
 void clockFunc(){
-  if((currTime - lastClockTime) > 5000){
+  if((currTime - lastClockTime) > 60000){
     lastClockTime = millis();
     if(clockT[1] == 59){
       clockT[1] = 0;
@@ -223,8 +219,8 @@ void clockFunc(){
       else{clockT[0]++;}
       }
     else{clockT[1]++;}
-   if(state[stateIndex] == "workout"){printTime();}
-   if(state[stateIndex] == "time"){printClockTime();}
+   if(state[stateIndex] == "workout"){printWorkoutTime();}
+   if(state[stateIndex] == "time"){printClockModeTime();}
     }
 }
 
@@ -250,7 +246,7 @@ void wakeModeWorkout(){
   isFirst = true;
   nextExercise(exCount);
   exToGo();
-  printTime();
+  printWorkoutTime();
   isSleeping = false;
   }
 
@@ -269,7 +265,7 @@ void lowBatteryFilter(){
       }
 }
 
-void printClockTime(){
+void printClockModeTime(){
   oled.setFont();
   oled.setFont(&Vermin_Vibes_198920pt7b);
   oled.setTextSize(1);
@@ -350,18 +346,18 @@ void shutDownCurrMode(){
   oled.clearDisplay();
   oled.fillScreen(BLACK);
   stateIndex++;
+  //checks if using the final stateIndex and resets
   if((sizeof(state)/sizeof(state[0])) == stateIndex){stateIndex = 0;}
 
+//boots the new state
   if(state[stateIndex] == "workout"){
-    //how tf are there only 3 functions to boot this and like 20 written
-    //kill me
     isFirst = true;
     nextExercise(exCount);
     exToGo();
-    printTime();
+    printWorkoutTime();
     }
    if(state[stateIndex] == "time"){
-    printClockTime();
+    printClockModeTime();
     }
     if(state[stateIndex] == "chronograph"){oled.display();}
   }
@@ -385,7 +381,7 @@ void loop() {
       }    
     }
   }
-  if(digitalRead(18) != true && (currTime - lastTime) > 300){
+  if(digitalRead(1) != true && (currTime - lastTime) > 300){
     lastTime = millis();
     shutDownCurrMode();
     }
